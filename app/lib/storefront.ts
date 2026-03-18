@@ -58,7 +58,7 @@ function getMockData<T>(query: string, variables: Record<string, unknown>): T {
     
     return {
       heroProduct,
-      newArrivals,
+      newArrivals: { nodes: newArrivals },
       featuredCollection: featuredCollection ? {
         ...featuredCollection,
         products: { nodes: newArrivals, pageInfo: { hasNextPage: false, endCursor: null } },
