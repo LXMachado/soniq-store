@@ -9,6 +9,9 @@ import {
 import type { LinksFunction, MetaFunction } from '@remix-run/node';
 
 import './styles/app.css';
+import { AnnouncementBar } from './components/layout/AnnouncementBar';
+import { Header } from './components/layout/Header';
+import { Footer } from './components/layout/Footer';
 
 export const links: LinksFunction = () => [
   { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
@@ -36,8 +39,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body>
-        {children}
+      <body className="bg-bg-primary text-text-primary">
+        <AnnouncementBar />
+        <Header />
+        <main>{children}</main>
+        <Footer />
         <ScrollRestoration />
         <Scripts />
       </body>
