@@ -7,6 +7,7 @@ import { formatCurrency } from '../lib/utils';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { AnimateIn } from '../components/motion/AnimateIn';
+import { SpecTable } from '../components/product/SpecTable';
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   const product = data?.product;
@@ -55,6 +56,18 @@ export async function loader({ params }: LoaderFunctionArgs) {
             }
           }
         }
+        metafields(identifiers: [
+          { namespace: "specs", key: "driver_type" }
+          { namespace: "specs", key: "impedance" }
+          { namespace: "specs", key: "frequency_response" }
+          { namespace: "specs", key: "sensitivity" }
+          { namespace: "specs", key: "weight" }
+          { namespace: "specs", key: "connector" }
+          { namespace: "specs", key: "cable_length" }
+        ]) {
+          key
+          value
+        }
       }
     }
   `;
@@ -77,6 +90,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
           price: { amount: string; currencyCode: string };
         }>;
       };
+      metafields: Array<{ key: string; value: string }>;
     } | null;
   };
 
@@ -94,6 +108,7 @@ export default function ProductPage() {
   const images = product.images?.nodes ?? [];
   const variants = product.variants?.nodes ?? [];
   const mainImage = images[0];
+  const specs = product.metafields?.filter(m => m.value) ?? [];
 
   return (
     <div className="min-h-screen bg-bg-primary pt-[76px]">
@@ -222,6 +237,11 @@ export default function ProductPage() {
               )}
             </div>
           </AnimateIn>
+
+          {/* Specs */}
+          <div className="mt-12">
+            <SpecTable specs={specs} />
+          </div>
         </div>
       </div>
     </div>

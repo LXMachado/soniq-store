@@ -2,6 +2,7 @@ import { Link } from '@remix-run/react';
 import type { MetaFunction, LoaderFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
+import { useState, useMemo } from 'react';
 import { storefront } from '../lib/storefront';
 import { formatCurrency } from '../lib/utils';
 import { Badge } from '../components/ui/Badge';
@@ -101,6 +102,55 @@ export default function CollectionPage() {
   const { collection } = useLoaderData<typeof loader>();
   const products = collection.products?.nodes ?? [];
 
+  // Filter and sort state
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState('featured');
+
+  // Get unique categories from product tags
+  const categories = useMemo(() => {
+    const tags = new Set<string>();
+    products.forEach(p => {
+      p.tags?.forEach(tag => {
+        if (tag !== 'new-arrival') tags.add(tag);
+      });
+    });
+    return Array.from(tags);
+  }, [products]);
+
+  // Filter and sort products
+  const filteredProducts = useMemo(() => {
+    let result = [...products];
+
+    // Filter by category
+    if (selectedCategory) {
+      result = result.filter(p => p.tags?.includes(selectedCategory));
+    }
+
+    // Sort
+    switch (sortKey) {
+      case 'price-low':
+        result.sort((a, b) => 
+          parseFloat(a.priceRange.minVariantPrice.amount) - parseFloat(b.priceRange.minVariantPrice.amount)
+        );
+        break;
+      case 'price-high':
+        result.sort((a, b) => 
+          parseFloat(b.priceRange.minVariantPrice.amount) - parseFloat(a.priceRange.minVariantPrice.amount)
+        );
+        break;
+      case 'newest':
+        result.sort((a, b) => 
+          (b.tags?.includes('new-arrival') ? 1 : 0) - (a.tags?.includes('new-arrival') ? 1 : 0)
+        );
+        break;
+      default:
+        // featured - keep original order
+        break;
+    }
+
+    return result;
+  }, [products, selectedCategory, sortKey]);
+
   return (
     <div className="min-h-screen bg-bg-primary pt-[76px]">
       {/* Collection Hero */}
@@ -127,72 +177,141 @@ export default function CollectionPage() {
         </div>
       </section>
 
-      {/* Products Grid */}
+      {/* Collection Content */}
       <section className="py-16">
         <div className="container mx-auto px-4 sm:px-6">
-          {products.length > 0 ? (
-            <StaggerContainer className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {products.map((product) => (
-                <StaggerItem key={product.id}>
-                  <Link to={`/products/${product.handle}`} className="group product-card block">
-                    <div className="relative aspect-square bg-bg-secondary rounded-xl overflow-hidden mb-4 border border-border/50 group-hover:border-border-hover transition-colors duration-300">
-                      {product.images?.nodes[0] && (
-                        <img
-                          src={product.images.nodes[0].url}
-                          alt={product.images.nodes[0].altText || product.title}
-                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                          loading="lazy"
-                        />
-                      )}
-                      {product.images?.nodes[1] && (
-                        <img
-                          src={product.images.nodes[1].url}
-                          alt={product.images.nodes[1].altText || product.title}
-                          className="absolute inset-0 w-full h-full object-cover product-image-alt"
-                          loading="lazy"
-                        />
-                      )}
-                      {/* Quick-add overlay */}
-                      <div className="absolute inset-x-3 bottom-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
-                        <div className="bg-bg-primary/90 backdrop-blur-sm rounded-lg px-4 py-2.5 text-center border border-border/60">
-                          <span className="text-xs font-medium text-text-primary uppercase tracking-wider">Quick View</span>
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Filter Sidebar */}
+            <aside className="w-full lg:w-64 flex-shrink-0">
+              <div className="lg:sticky lg:top-24 space-y-8">
+                {/* Categories */}
+                <div>
+                  <h3 className="font-display text-sm font-semibold text-text-primary mb-4">Category</h3>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setSelectedCategory(null)}
+                      className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                        !selectedCategory ? 'bg-accent/10 text-accent' : 'text-text-secondary hover:text-text-primary hover:bg-bg-secondary'
+                      }`}
+                    >
+                      All Products
+                    </button>
+                    {categories.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`block w-full text-left px-3 py-2 rounded-lg text-sm capitalize transition-colors ${
+                          selectedCategory === cat ? 'bg-accent/10 text-accent' : 'text-text-secondary hover:text-text-primary hover:bg-bg-secondary'
+                        }`}
+                      >
+                        {cat.replace(/-/g, ' ')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Availability */}
+                <div>
+                  <h3 className="font-display text-sm font-semibold text-text-primary mb-4">Availability</h3>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-border bg-bg-secondary text-accent focus:ring-accent focus:ring-offset-bg-primary"
+                    />
+                    <span className="text-sm text-text-secondary">In Stock Only</span>
+                  </label>
+                </div>
+              </div>
+            </aside>
+
+            {/* Products Grid */}
+            <div className="flex-1">
+              {/* Sort and Count */}
+              <div className="flex items-center justify-between mb-8 pb-4 border-b border-border/30">
+                <p className="text-sm text-text-secondary">
+                  {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
+                </p>
+                <div className="flex items-center gap-3">
+                  <label htmlFor="sort" className="text-sm text-text-secondary">Sort by:</label>
+                  <select
+                    id="sort"
+                    value={sortKey}
+                    onChange={(e) => setSortKey(e.target.value)}
+                    className="bg-bg-secondary border border-border/50 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+                  >
+                    <option value="featured">Featured</option>
+                    <option value="newest">Newest</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                  </select>
+                </div>
+              </div>
+
+              {filteredProducts.length > 0 ? (
+                <StaggerContainer className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {filteredProducts.map((product) => (
+                    <StaggerItem key={product.id}>
+                      <Link to={`/products/${product.handle}`} className="group product-card block">
+                        <div className="relative aspect-square bg-bg-secondary rounded-xl overflow-hidden mb-4 border border-border/50 group-hover:border-border-hover transition-colors duration-300">
+                          {product.images?.nodes[0] && (
+                            <img
+                              src={product.images.nodes[0].url}
+                              alt={product.images.nodes[0].altText || product.title}
+                              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                              loading="lazy"
+                            />
+                          )}
+                          {product.images?.nodes[1] && (
+                            <img
+                              src={product.images.nodes[1].url}
+                              alt={product.images.nodes[1].altText || product.title}
+                              className="absolute inset-0 w-full h-full object-cover product-image-alt"
+                              loading="lazy"
+                            />
+                          )}
+                          {/* Quick-add overlay */}
+                          <div className="absolute inset-x-3 bottom-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
+                            <div className="bg-bg-primary/90 backdrop-blur-sm rounded-lg px-4 py-2.5 text-center border border-border/60">
+                              <span className="text-xs font-medium text-text-primary uppercase tracking-wider">Quick View</span>
+                            </div>
+                          </div>
+                          {/* New badge */}
+                          {product.tags?.includes('new-arrival') && (
+                            <div className="absolute top-3 left-3">
+                              <Badge variant="new">New</Badge>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      {/* New badge */}
-                      {product.tags?.includes('new-arrival') && (
-                        <div className="absolute top-3 left-3">
-                          <Badge variant="new">New</Badge>
+                        <div className="space-y-1.5">
+                          <h3 className="font-display text-base font-medium group-hover:text-accent transition-colors duration-200">
+                            {product.title}
+                          </h3>
+                          <div className="flex items-center justify-between">
+                            <p className="text-text-secondary text-sm">
+                              {formatCurrency(product.priceRange.minVariantPrice.amount)}
+                            </p>
+                            {product.variants?.nodes[0]?.availableForSale && (
+                              <Badge variant="success">In Stock</Badge>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      <h3 className="font-display text-base font-medium group-hover:text-accent transition-colors duration-200">
-                        {product.title}
-                      </h3>
-                      <div className="flex items-center justify-between">
-                        <p className="text-text-secondary text-sm">
-                          {formatCurrency(product.priceRange.minVariantPrice.amount)}
-                        </p>
-                        {product.variants?.nodes[0]?.availableForSale && (
-                          <Badge variant="success">In Stock</Badge>
-                        )}
-                      </div>
-                    </div>
+                      </Link>
+                    </StaggerItem>
+                  ))}
+                </StaggerContainer>
+              ) : (
+                <div className="text-center py-20">
+                  <p className="text-text-secondary mb-6">No products found in this collection.</p>
+                  <Link
+                    to="/collections"
+                    className="text-accent hover:text-accent-hover transition-colors"
+                  >
+                    View all collections →
                   </Link>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          ) : (
-            <div className="text-center py-20">
-              <p className="text-text-secondary mb-6">No products found in this collection.</p>
-              <Link
-                to="/collections"
-                className="text-accent hover:text-accent-hover transition-colors"
-              >
-                View all collections →
-              </Link>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </section>
     </div>
