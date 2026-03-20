@@ -3,6 +3,7 @@ import type { MetaFunction, LoaderFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { storefront } from '~/lib/storefront';
+import { SEARCH_QUERY } from '~/lib/shopify/queries';
 import { formatCurrency } from '~/lib/utils';
 import { Badge } from '~/components/ui/Badge';
 import { Button } from '~/components/ui/Button';
@@ -51,55 +52,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
     });
   }
 
-  const searchQuery = `
-    query SearchProducts($query: String!) {
-      products(first: 24, query: $query) {
-        nodes {
-          id
-          title
-          handle
-          description
-          tags
-          priceRange {
-            minVariantPrice {
-              amount
-              currencyCode
-            }
-          }
-          images(first: 2) {
-            nodes {
-              url
-              altText
-            }
-          }
-          variants(first: 1) {
-            nodes {
-              availableForSale
-            }
-          }
-        }
-      }
-      collections(first: 20) {
-        nodes {
-          id
-          handle
-          title
-          description
-          image {
-            url
-            altText
-          }
-        }
-      }
-    }
-  `;
-
   type SearchData = {
     products: { nodes: SearchProduct[] };
     collections: { nodes: SearchCollection[] };
   };
 
-  const data = await storefront<SearchData>(searchQuery, { query });
+  const data = await storefront<SearchData>(SEARCH_QUERY, { query });
   const normalizedQuery = query.toLowerCase();
 
   const products = (data.products?.nodes ?? []).filter((product) =>

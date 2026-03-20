@@ -3,6 +3,7 @@ import type { MetaFunction, LoaderFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import { storefront } from '~/lib/storefront';
+import { COLLECTIONS_QUERY } from '~/lib/shopify/queries';
 import { AnimateIn, StaggerContainer, StaggerItem } from '~/components/motion/AnimateIn';
 
 export const meta: MetaFunction = () => {
@@ -13,23 +14,6 @@ export const meta: MetaFunction = () => {
 };
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const query = `
-    query Collections {
-      collections(first: 20) {
-        nodes {
-          id
-          handle
-          title
-          description
-          image {
-            url
-            altText
-          }
-        }
-      }
-    }
-  `;
-
   type CollectionsData = {
     collections: {
       nodes: Array<{
@@ -42,7 +26,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     };
   };
 
-  const data = await storefront<CollectionsData>(query);
+  const data = await storefront<CollectionsData>(COLLECTIONS_QUERY);
 
   return json({ collections: data.collections?.nodes ?? [] });
 }

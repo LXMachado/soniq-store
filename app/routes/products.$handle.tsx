@@ -4,6 +4,7 @@ import { json } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import { useMemo, useState } from 'react';
 import { storefront } from '../lib/storefront';
+import { PRODUCT_BY_HANDLE_QUERY, RELATED_PRODUCTS_QUERY } from '../lib/shopify/queries';
 import { formatCurrency } from '../lib/utils';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -26,62 +27,6 @@ export async function loader({ params }: LoaderFunctionArgs) {
   if (!handle) {
     throw new Response('Product not found', { status: 404 });
   }
-
-  const query = `
-    query ProductByHandle($handle: String!) {
-      product(handle: $handle) {
-        id
-        title
-        handle
-        description
-        descriptionHtml
-        tags
-        priceRange {
-          minVariantPrice {
-            amount
-            currencyCode
-          }
-        }
-        images(first: 10) {
-          nodes {
-            url
-            altText
-          }
-        }
-        variants(first: 10) {
-          nodes {
-            id
-            title
-            availableForSale
-            price {
-              amount
-              currencyCode
-            }
-            selectedOptions {
-              name
-              value
-            }
-            image {
-              url
-              altText
-            }
-          }
-        }
-        metafields(identifiers: [
-          { namespace: "specs", key: "driver_type" }
-          { namespace: "specs", key: "impedance" }
-          { namespace: "specs", key: "frequency_response" }
-          { namespace: "specs", key: "sensitivity" }
-          { namespace: "specs", key: "weight" }
-          { namespace: "specs", key: "connector" }
-          { namespace: "specs", key: "cable_length" }
-        ]) {
-          key
-          value
-        }
-      }
-    }
-  `;
 
   type ProductData = {
     product: {
@@ -107,41 +52,11 @@ export async function loader({ params }: LoaderFunctionArgs) {
     } | null;
   };
 
-  const data = await storefront<ProductData>(query, { handle });
+  const data = await storefront<ProductData>(PRODUCT_BY_HANDLE_QUERY, { handle });
 
   if (!data.product) {
     throw new Response('Product not found', { status: 404 });
   }
-
-  const relatedProductsQuery = `
-    query RelatedProducts {
-      products(first: 8) {
-        nodes {
-          id
-          title
-          handle
-          tags
-          priceRange {
-            minVariantPrice {
-              amount
-              currencyCode
-            }
-          }
-          images(first: 1) {
-            nodes {
-              url
-              altText
-            }
-          }
-          variants(first: 1) {
-            nodes {
-              availableForSale
-            }
-          }
-        }
-      }
-    }
-  `;
 
   type RelatedProductsData = {
     products: {
@@ -157,7 +72,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
     };
   };
 
-  const relatedData = await storefront<RelatedProductsData>(relatedProductsQuery);
+  const relatedData = await storefront<RelatedProductsData>(RELATED_PRODUCTS_QUERY);
   const relatedProducts = (relatedData.products?.nodes ?? [])
     .filter((candidate) => candidate.handle !== data.product?.handle)
     .filter((candidate) =>

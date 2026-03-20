@@ -4,6 +4,7 @@ import { json } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import { useEffect, useMemo, useState } from 'react';
 import { storefront } from '../lib/storefront';
+import { COLLECTION_BY_HANDLE_QUERY } from '../lib/shopify/queries';
 import { formatCurrency } from '../lib/utils';
 import { Badge } from '../components/ui/Badge';
 import { AnimateIn, StaggerContainer, StaggerItem } from '../components/motion/AnimateIn';
@@ -25,50 +26,6 @@ export async function loader({ params }: LoaderFunctionArgs) {
   if (!handle) {
     throw new Response('Collection not found', { status: 404 });
   }
-
-  const query = `
-    query CollectionByHandle($handle: String!) {
-      collection(handle: $handle) {
-        id
-        handle
-        title
-        description
-        image {
-          url
-          altText
-        }
-        products(first: 20) {
-          nodes {
-            id
-            title
-            handle
-            tags
-            priceRange {
-              minVariantPrice {
-                amount
-                currencyCode
-              }
-            }
-            images(first: 2) {
-              nodes {
-                url
-                altText
-              }
-            }
-            variants(first: 1) {
-              nodes {
-                availableForSale
-              }
-            }
-          }
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
-        }
-      }
-    }
-  `;
 
   type CollectionData = {
     collection: {
@@ -92,7 +49,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
     } | null;
   };
 
-  const data = await storefront<CollectionData>(query, { handle });
+  const data = await storefront<CollectionData>(COLLECTION_BY_HANDLE_QUERY, { handle });
 
   if (!data.collection) {
     throw new Response('Collection not found', { status: 404 });

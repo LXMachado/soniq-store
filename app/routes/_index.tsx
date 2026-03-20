@@ -3,6 +3,7 @@ import type { MetaFunction, LoaderFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import { storefront } from '../lib/storefront';
+import { HOME_PAGE_QUERY } from '../lib/shopify/queries';
 import { formatCurrency } from '../lib/utils';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -16,59 +17,6 @@ export const meta: MetaFunction = () => {
 };
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const query = `
-    query {
-      heroProduct: product(handle: "soniq-h1-pro") {
-        id
-        title
-        description
-        priceRange {
-          minVariantPrice {
-            amount
-            currencyCode
-          }
-        }
-        images(first: 1) {
-          nodes {
-            url
-            altText
-          }
-        }
-        variants(first: 1) {
-          nodes {
-            id
-            availableForSale
-          }
-        }
-      }
-      newArrivals: products(first: 3) {
-        nodes {
-          id
-          title
-          handle
-          tags
-          priceRange {
-            minVariantPrice {
-              amount
-              currencyCode
-            }
-          }
-          images(first: 2) {
-            nodes {
-              url
-              altText
-            }
-          }
-          variants(first: 1) {
-            nodes {
-              availableForSale
-            }
-          }
-        }
-      }
-    }
-  `;
-
   type Product = {
     id: string;
     title: string;
@@ -89,7 +37,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       variants: { nodes: Array<{ id: string; availableForSale: boolean }> };
     };
     newArrivals: { nodes: Product[] };
-  }>(query);
+  }>(HOME_PAGE_QUERY);
 
   return json({ data });
 }
