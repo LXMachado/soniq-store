@@ -21,13 +21,16 @@ const sizeStyles: Record<ButtonSize, string> = {
   lg: 'px-8 py-4 text-base gap-2.5 rounded-lg',
 };
 
-interface ButtonProps {
+interface ButtonOwnProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
   fullWidth?: boolean;
-  as?: ElementType;
 }
+
+type ButtonProps<T extends ElementType> = ButtonOwnProps & {
+  as?: T;
+} & Omit<ComponentPropsWithoutRef<T>, keyof ButtonOwnProps | 'as'>;
 
 export function Button<T extends ElementType = 'button'>({
   variant = 'primary',
@@ -39,8 +42,9 @@ export function Button<T extends ElementType = 'button'>({
   children,
   disabled,
   ...props
-}: ButtonProps & Omit<ComponentPropsWithoutRef<T>, keyof ButtonProps>) {
+}: ButtonProps<T>) {
   const Component = as ?? 'button';
+  const isButtonElement = Component === 'button';
 
   return (
     <Component
@@ -53,7 +57,8 @@ export function Button<T extends ElementType = 'button'>({
         fullWidth && 'w-full',
         className,
       )}
-      disabled={disabled || loading}
+      {...(isButtonElement ? { disabled: disabled || loading } : {})}
+      aria-disabled={!isButtonElement && (disabled || loading) ? true : undefined}
       {...props}
     >
       {loading && (

@@ -1,12 +1,15 @@
-import { Link } from '@remix-run/react';
+import { Link, useSearchParams } from '@remix-run/react';
 import type { MetaFunction, LoaderFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { storefront } from '../lib/storefront';
 import { formatCurrency } from '../lib/utils';
 import { Badge } from '../components/ui/Badge';
 import { AnimateIn, StaggerContainer, StaggerItem } from '../components/motion/AnimateIn';
+import { ProductGridSkeleton } from '../components/ui/Skeleton';
+
+const PRODUCTS_PER_PAGE = 6;
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   const collection = data?.collection;
@@ -100,11 +103,14 @@ export async function loader({ params }: LoaderFunctionArgs) {
 
 export default function CollectionPage() {
   const { collection } = useLoaderData<typeof loader>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const products = collection.products?.nodes ?? [];
+  const [isFiltering, setIsFiltering] = useState(false);
 
-  // Filter and sort state
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState('featured');
+  const selectedCategory = searchParams.get('category');
+  const sortKey = searchParams.get('sort') ?? 'featured';
+  const inStockOnly = searchParams.get('availability') === 'in-stock';
+  const currentPage = Math.max(1, Number(searchParams.get('page') ?? '1') || 1);
 
   // Get unique categories from product tags
   const categories = useMemo(() => {
@@ -124,6 +130,10 @@ export default function CollectionPage() {
     // Filter by category
     if (selectedCategory) {
       result = result.filter(p => p.tags?.includes(selectedCategory));
+    }
+
+    if (inStockOnly) {
+      result = result.filter((p) => p.variants?.nodes[0]?.availableForSale);
     }
 
     // Sort
@@ -149,7 +159,38 @@ export default function CollectionPage() {
     }
 
     return result;
-  }, [products, selectedCategory, sortKey]);
+  }, [products, selectedCategory, sortKey, inStockOnly]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+  const page = Math.min(currentPage, totalPages);
+  const paginatedProducts = filteredProducts.slice(
+    (page - 1) * PRODUCTS_PER_PAGE,
+    page * PRODUCTS_PER_PAGE,
+  );
+
+  useEffect(() => {
+    setIsFiltering(true);
+    const timeout = window.setTimeout(() => setIsFiltering(false), 180);
+    return () => window.clearTimeout(timeout);
+  }, [selectedCategory, sortKey, inStockOnly, page]);
+
+  function updateParams(updates: Record<string, string | null>) {
+    const next = new URLSearchParams(searchParams);
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (!value) {
+        next.delete(key);
+      } else {
+        next.set(key, value);
+      }
+    });
+
+    if (!updates.page) {
+      next.delete('page');
+    }
+
+    setSearchParams(next, { preventScrollReset: true });
+  }
 
   return (
     <div className="min-h-screen bg-bg-primary pt-[76px]">
@@ -189,7 +230,7 @@ export default function CollectionPage() {
                   <h3 className="font-display text-sm font-semibold text-text-primary mb-4">Category</h3>
                   <div className="space-y-2">
                     <button
-                      onClick={() => setSelectedCategory(null)}
+                      onClick={() => updateParams({ category: null, page: null })}
                       className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                         !selectedCategory ? 'bg-accent/10 text-accent' : 'text-text-secondary hover:text-text-primary hover:bg-bg-secondary'
                       }`}
@@ -199,7 +240,7 @@ export default function CollectionPage() {
                     {categories.map((cat) => (
                       <button
                         key={cat}
-                        onClick={() => setSelectedCategory(cat)}
+                        onClick={() => updateParams({ category: cat, page: null })}
                         className={`block w-full text-left px-3 py-2 rounded-lg text-sm capitalize transition-colors ${
                           selectedCategory === cat ? 'bg-accent/10 text-accent' : 'text-text-secondary hover:text-text-primary hover:bg-bg-secondary'
                         }`}
@@ -216,6 +257,13 @@ export default function CollectionPage() {
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
+                      checked={inStockOnly}
+                      onChange={(e) =>
+                        updateParams({
+                          availability: e.target.checked ? 'in-stock' : null,
+                          page: null,
+                        })
+                      }
                       className="w-4 h-4 rounded border-border bg-bg-secondary text-accent focus:ring-accent focus:ring-offset-bg-primary"
                     />
                     <span className="text-sm text-text-secondary">In Stock Only</span>
@@ -236,7 +284,7 @@ export default function CollectionPage() {
                   <select
                     id="sort"
                     value={sortKey}
-                    onChange={(e) => setSortKey(e.target.value)}
+                    onChange={(e) => updateParams({ sort: e.target.value, page: null })}
                     className="bg-bg-secondary border border-border/50 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
                   >
                     <option value="featured">Featured</option>
@@ -247,9 +295,12 @@ export default function CollectionPage() {
                 </div>
               </div>
 
-              {filteredProducts.length > 0 ? (
+              {isFiltering ? (
+                <ProductGridSkeleton count={PRODUCTS_PER_PAGE} />
+              ) : filteredProducts.length > 0 ? (
+                <>
                 <StaggerContainer className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredProducts.map((product) => (
+                  {paginatedProducts.map((product) => (
                     <StaggerItem key={product.id}>
                       <Link to={`/products/${product.handle}`} className="group product-card block">
                         <div className="relative aspect-square bg-bg-secondary rounded-xl overflow-hidden mb-4 border border-border/50 group-hover:border-border-hover transition-colors duration-300">
@@ -299,6 +350,46 @@ export default function CollectionPage() {
                     </StaggerItem>
                   ))}
                 </StaggerContainer>
+                {totalPages > 1 && (
+                  <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-border/30 pt-6">
+                    <p className="text-sm text-text-secondary">
+                      Page {page} of {totalPages}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateParams({ page: page > 1 ? String(page - 1) : null })}
+                        disabled={page === 1}
+                        className="rounded-lg border border-border/50 px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Previous
+                      </button>
+                      {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                        <button
+                          key={pageNumber}
+                          type="button"
+                          onClick={() => updateParams({ page: pageNumber === 1 ? null : String(pageNumber) })}
+                          className={`h-10 w-10 rounded-lg border text-sm transition-colors ${
+                            pageNumber === page
+                              ? 'border-accent bg-accent/10 text-accent'
+                              : 'border-border/50 text-text-secondary hover:border-border-hover hover:text-text-primary'
+                          }`}
+                        >
+                          {pageNumber}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => updateParams({ page: page < totalPages ? String(page + 1) : String(totalPages) })}
+                        disabled={page === totalPages}
+                        className="rounded-lg border border-border/50 px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+                </>
               ) : (
                 <div className="text-center py-20">
                   <p className="text-text-secondary mb-6">No products found in this collection.</p>
