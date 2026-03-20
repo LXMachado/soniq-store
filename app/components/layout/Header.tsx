@@ -1,6 +1,7 @@
 import { Link, useLocation } from '@remix-run/react';
 import { useEffect, useState } from 'react';
 import { cn } from '~/lib/utils';
+import { useCart } from '~/components/cart/CartProvider';
 
 const NAV_LINKS = [
   { label: 'Headphones', href: '/collections/headphones' },
@@ -14,6 +15,7 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const { itemCount, openCart } = useCart();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 48);
@@ -78,8 +80,9 @@ export function Header() {
               </svg>
             </Link>
 
-            <Link
-              to="/cart"
+            <button
+              type="button"
+              onClick={openCart}
               aria-label="Cart"
               className="p-2 text-text-secondary hover:text-text-primary transition-colors duration-200 rounded-md relative"
             >
@@ -88,7 +91,12 @@ export function Header() {
                 <line x1="3" y1="6" x2="21" y2="6" />
                 <path d="M16 10a4 4 0 01-8 0" />
               </svg>
-            </Link>
+              {itemCount > 0 && (
+                <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  {itemCount}
+                </span>
+              )}
+            </button>
 
             {/* Mobile hamburger */}
             <button

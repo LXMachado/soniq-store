@@ -12,6 +12,7 @@ import './styles/app.css';
 import { AnnouncementBar } from './components/layout/AnnouncementBar';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
+import { CartProvider } from './components/cart/CartProvider';
 
 export const links: LinksFunction = () => [
   { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
@@ -40,12 +41,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body className="bg-bg-primary text-text-primary">
-        <AnnouncementBar />
-        <Header />
-        <main>{children}</main>
-        <Footer />
-        <ScrollRestoration />
-        <Scripts />
+        <CartProvider>
+          <AnnouncementBar />
+          <Header />
+          <main>{children}</main>
+          <Footer />
+          <ScrollRestoration />
+          <Scripts />
+        </CartProvider>
       </body>
     </html>
   );

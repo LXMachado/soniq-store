@@ -1,38 +1,26 @@
 import { useEffect, useRef } from 'react';
 import { Link } from '@remix-run/react';
-import { AnimateIn } from '../motion/AnimateIn';
 import { Button } from '../ui/Button';
-
-interface CartItem {
-  id: string;
-  quantity: number;
-  merchandise: {
-    id: string;
-    title: string;
-    product: {
-      title: string;
-      handle: string;
-    };
-    image: {
-      url: string;
-      altText: string;
-    } | null;
-    price: {
-      amount: string;
-      currencyCode: string;
-    };
-    selectedOptions: Array<{ name: string; value: string }>;
-  };
-}
+import { formatCurrency } from '~/lib/utils';
+import type { CartItem } from './CartProvider';
 
 interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   items?: CartItem[];
   isLoading?: boolean;
+  onQuantityChange: (id: string, quantity: number) => void;
+  onRemoveItem: (id: string) => void;
 }
 
-export function CartDrawer({ isOpen, onClose, items = [], isLoading = false }: CartDrawerProps) {
+export function CartDrawer({
+  isOpen,
+  onClose,
+  items = [],
+  isLoading = false,
+  onQuantityChange,
+  onRemoveItem,
+}: CartDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
 
   // Close on escape key
@@ -61,13 +49,6 @@ export function CartDrawer({ isOpen, onClose, items = [], isLoading = false }: C
   const subtotal = items.reduce((sum, item) => {
     return sum + parseFloat(item.merchandise.price.amount) * item.quantity;
   }, 0);
-
-  const formatCurrency = (amount: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(parseFloat(amount));
-  };
 
   if (!isOpen) return null;
 
@@ -171,6 +152,8 @@ export function CartDrawer({ isOpen, onClose, items = [], isLoading = false }: C
                       {/* Quantity controls */}
                       <div className="flex items-center gap-2 mt-2">
                         <button
+                          type="button"
+                          onClick={() => onQuantityChange(item.id, item.quantity - 1)}
                           className="w-7 h-7 rounded bg-bg-tertiary text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center"
                           aria-label="Decrease quantity"
                         >
@@ -180,6 +163,8 @@ export function CartDrawer({ isOpen, onClose, items = [], isLoading = false }: C
                         </button>
                         <span className="text-sm w-6 text-center">{item.quantity}</span>
                         <button
+                          type="button"
+                          onClick={() => onQuantityChange(item.id, item.quantity + 1)}
                           className="w-7 h-7 rounded bg-bg-tertiary text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center"
                           aria-label="Increase quantity"
                         >
@@ -188,6 +173,8 @@ export function CartDrawer({ isOpen, onClose, items = [], isLoading = false }: C
                           </svg>
                         </button>
                         <button
+                          type="button"
+                          onClick={() => onRemoveItem(item.id)}
                           className="ml-auto text-text-tertiary hover:text-error transition-colors"
                           aria-label="Remove item"
                         >
@@ -216,8 +203,8 @@ export function CartDrawer({ isOpen, onClose, items = [], isLoading = false }: C
             <p className="text-xs text-text-tertiary">
               Shipping and taxes calculated at checkout
             </p>
-            <Button variant="primary" size="lg" className="w-full">
-              Checkout
+            <Button as={Link} to="/cart" variant="primary" size="lg" className="w-full" onClick={onClose}>
+              View Cart
             </Button>
             <button
               onClick={onClose}
