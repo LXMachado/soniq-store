@@ -48,6 +48,7 @@ function getMockData<T>(query: string, variables: Record<string, unknown>): T {
   // Parse query to determine what data to return
   const queryLower = query.toLowerCase();
   const handle = variables.handle as string | undefined;
+  const searchQuery = typeof variables.query === 'string' ? variables.query.toLowerCase() : '';
 
   // Homepage data query
   if (queryLower.includes('heroproduct') && queryLower.includes('newarrivals')) {
@@ -78,6 +79,30 @@ function getMockData<T>(query: string, variables: Record<string, unknown>): T {
       throw new Error(`Product not found: ${handle}`);
     }
     return { product } as T;
+  }
+
+  if (queryLower.includes('products(') && queryLower.includes('collections(')) {
+    const products = getMockProducts().filter((product) => {
+      if (!searchQuery) return true;
+      return [
+        product.title,
+        product.handle,
+        product.description,
+        product.vendor,
+        product.productType,
+        ...product.tags,
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(searchQuery);
+    });
+
+    const collections = getMockCollections();
+
+    return {
+      products: { nodes: products },
+      collections: { nodes: collections },
+    } as T;
   }
 
   // Products query (collection products)
