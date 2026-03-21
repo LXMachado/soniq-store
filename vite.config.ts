@@ -2,6 +2,7 @@ import { vitePlugin as remix } from '@remix-run/dev';
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
+import { netlifyPlugin } from '@netlify/remix-adapter/plugin';
 
 export default defineConfig({
   resolve: {
@@ -18,5 +19,6 @@ export default defineConfig({
         v3_throwAbortReason: true,
       },
     }),
+    netlifyPlugin(),
   ],
-});
+}); 
