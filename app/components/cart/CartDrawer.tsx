@@ -22,27 +22,69 @@ export function CartDrawer({
   onRemoveItem,
 }: CartDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
 
-  // Close on escape key
+  // Close on escape key and focus trap
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
+
     if (isOpen) {
+      // Store the currently focused element
+      previousActiveElement.current = document.activeElement as HTMLElement;
+      
+      // Focus the drawer when it opens
+      setTimeout(() => {
+        drawerRef.current?.focus();
+      }, 0);
+      
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
     }
+
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
+      
+      // Restore focus to previous element when drawer closes
+      if (previousActiveElement.current) {
+        previousActiveElement.current.focus();
+      }
     };
   }, [isOpen, onClose]);
 
-  // Focus trap
+  // Focus trap for Tab key
   useEffect(() => {
-    if (isOpen && drawerRef.current) {
-      drawerRef.current.focus();
-    }
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      if (!drawerRef.current) return;
+
+      const focusableElements = drawerRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (!firstElement || !lastElement) return;
+
+      // Shift + Tab on first element - trap to last
+      if (e.shiftKey && document.activeElement === firstElement) {
+        e.preventDefault();
+        lastElement.focus();
+      }
+      // Tab on last element - trap to first
+      else if (!e.shiftKey && document.activeElement === lastElement) {
+        e.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
   const isEmpty = items.length === 0;

@@ -1,8 +1,21 @@
 import { type ClassValue, clsx } from 'clsx';
+import DOMPurify from 'dompurify';
 
 // Classname utility
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
+}
+
+// Sanitize HTML to prevent XSS attacks
+export function sanitizeHtml(html: string): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'b', 'i', 'u', 'span', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+  });
 }
 
 // Currency formatter

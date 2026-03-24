@@ -84,7 +84,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isReady || typeof window === 'undefined') return;
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+    try {
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+    } catch (error) {
+      console.warn('Failed to persist cart to localStorage:', error);
+    }
   }, [items, isReady]);
 
   const value = useMemo<CartContextValue>(() => {

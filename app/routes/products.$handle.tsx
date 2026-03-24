@@ -5,7 +5,7 @@ import { useLoaderData } from '@remix-run/react';
 import { useMemo, useState } from 'react';
 import { storefront } from '../lib/storefront';
 import { PRODUCT_BY_HANDLE_QUERY, RELATED_PRODUCTS_QUERY } from '../lib/shopify/queries';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, sanitizeHtml } from '../lib/utils';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { AnimateIn } from '../components/motion/AnimateIn';
@@ -203,7 +203,7 @@ export default function ProductPage() {
               {/* Description */}
               <div className="text-text-secondary leading-relaxed">
                 {product.descriptionHtml ? (
-                  <div dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
+                  <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.descriptionHtml) }} />
                 ) : (
                   <p>{product.description}</p>
                 )}
