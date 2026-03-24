@@ -19,6 +19,9 @@ dist/
 *.swp
 *.swo
 
+# AI Assistants
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -31,3 +34,8 @@ yarn-error.log*
 
 # Testing
 coverage/
+.gitignore
+CLAUDE.md
+
+# Shopify
+products.csv
