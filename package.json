@@ -40,6 +40,7 @@
     "tar": "^7.5.11",
     "estree-util-value-to-estree": ">=3.5.0",
     "esbuild": ">=0.25.0",
-    "lodash": "4.17.21"
+    "lodash": "4.17.21",
+    "postcss": "^8.5.18"
   }
 }
